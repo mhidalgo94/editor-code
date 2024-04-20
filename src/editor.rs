@@ -1,4 +1,4 @@
-use std::io::{stdin, stdout, Error};
+use std::io::{self, stdin, stdout, Error, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 // use termion::input::TermRead;
@@ -15,11 +15,14 @@ impl Editor {
         let _stdout = stdout().into_raw_mode().unwrap();
 
         loop {
-            if let Err(error) = self.process_keyress() {
+            if let Err(error) = self.refresh_screen() {
                 die(error);
             }
             if self.should_quit {
                 break;
+            }
+            if let Err(error) = self.process_keyress(){
+                die(error);
             }
         }
         // for key in io::stdin().keys(){
@@ -51,8 +54,14 @@ impl Editor {
         }
         Ok(())
     }
+
     pub fn default() -> Self {
         Self{ should_quit: false}
+    }
+
+    fn refresh_screen(&self) -> Result<(), Error> {
+        print!("\x1b[2J"); // clear current output in terminal
+        io::stdout().flush()
     }
 
 }
@@ -64,6 +73,7 @@ fn read_key() -> Result<Key, Error> {
         }
     }
 }
+
 fn die(e: Error){
     panic!("{}",e);
 }
