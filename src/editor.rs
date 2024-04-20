@@ -60,7 +60,8 @@ impl Editor {
     }
 
     fn refresh_screen(&self) -> Result<(), Error> {
-        print!("\x1b[2J"); // clear current output in terminal
+        // print!("\x1b[2J"); // clear current output in terminal
+        print!("{}", termion::clear::All);
         io::stdout().flush()
     }
 
