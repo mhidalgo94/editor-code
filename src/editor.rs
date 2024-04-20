@@ -62,6 +62,9 @@ impl Editor {
     fn refresh_screen(&self) -> Result<(), Error> {
         // print!("\x1b[2J"); // clear current output in terminal
         print!("{}{}", termion::clear::All, termion::cursor::Goto(1,1)); // clear current output in terminal and position cursor
+        if self.should_quit{
+            println!("Closing Editor. \r");
+        }
         io::stdout().flush()
     }
 
@@ -76,5 +79,6 @@ fn read_key() -> Result<Key, Error> {
 }
 
 fn die(e: Error){
+    print!("{}", termion::clear::All);
     panic!("{}",e);
 }
