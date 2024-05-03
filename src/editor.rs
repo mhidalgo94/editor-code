@@ -63,7 +63,14 @@ impl Editor {
         match pressed_key {
             // Key::Ctrl('q') => panic!("Program end"),
             Key::Ctrl('c') => self.should_quit = true,
-            Key::Up | Key::Down | Key::Left | Key::Right => self.move_cursor(pressed_key),
+            Key::Up 
+            | Key::Down 
+            | Key::Left 
+            | Key::Right 
+            | Key::PageUp
+            | Key::PageDown 
+            | Key::End
+            | Key::Home => self.move_cursor(pressed_key),
             _ => (),
         }
         Ok(())
@@ -88,7 +95,11 @@ impl Editor {
                 if x < width{
                     x = x.saturating_add(1);
                 }
-            }
+            },
+            Key::PageUp => y = 0,
+            Key::PageDown => y = height,
+            Key::End => x = width,
+            Key::Home => y = 0,
             _ => (),          
         }
         self.cursor_position = Position {x, y}
