@@ -1,9 +1,12 @@
 use crate::Terminal;
 use std::io::Error;
 use termion::event::Key;
+use crate::{Document, Row};
+
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Default)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -12,6 +15,7 @@ pub struct Position {
 pub struct Editor {
     should_quit: bool,
     terminal : Terminal,
+    document: Document,
     cursor_position : Position,
 }
 
@@ -21,7 +25,8 @@ impl Editor {
         Self { 
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
-            cursor_position: Position {x:10, y:5},  
+            cursor_position: Position::default(),  
+            document : Document::default(),
         }
     }
 
@@ -109,7 +114,7 @@ impl Editor {
         // print!("\x1b[2J"); // clear current output in terminal
         // print!("{}{}", termion::clear::All, termion::cursor::Goto(1,1)); // clear current output in terminal and position cursor
         Terminal::cursor_hide();
-        Terminal::cursor_position(&Position{ x:0, y:0});
+        Terminal::cursor_position(&Position::default());
 
         if self.should_quit{
             Terminal::clear_screen();
@@ -134,16 +139,21 @@ impl Editor {
         println!("{}\r", welcome_message);
     }
 
+    fn draw_row(&self, row:&Row){
+        let start = 0;
+        let end = self.terminal.size().width as usize;
+        let row = row.render(start, end);
+        println!("{}\r", row)
+    }
     fn draw_rows (&self){
         let height = self.terminal.size().height - 1;
-        for row in 0..height {
+        for terminal_row in 0..height {
             Terminal::clear_current_line();
-            println!("~\r");
-            if row == height / 3 {
+            if let Some(row) = self.document.row(terminal_row as usize){
+                self.draw_row(row);
+            }else if self.document.is_empty() &&  terminal_row == height / 3{
                 self.draw_welcome_message();
-                // let width = std::cmp::min(self.terminal.size().width as usize, msg_welcome.len());
-                // println!("{}\r", &msg_welcome[..width]);
-            } else {
+            }else {
                 print!("~\r");
             }
         }
