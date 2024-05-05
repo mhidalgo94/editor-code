@@ -26,7 +26,11 @@ impl Row{
         for grapheme in self.string[..]
         .graphemes(true)
         .skip(start).take(end - start){
-            result.push_str(grapheme);
+            if grapheme == "/t"{
+                result.push_str(" ");
+            }else {
+                result.push_str(grapheme);
+            }
         }
         result
     }
