@@ -3,8 +3,30 @@ use std::io::Error;
 use termion::event::Key;
 use crate::{Document, Row};
 use std::env;
+use termion::color;
+use std::time::Duration;
+use std::time::Instant;
 
+const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
+const STATUS_BG_COLOR: color::Rgb = color::Rgb(238,238,238);
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+struct StatusMessage {
+    text:String,
+    time: Instant,
+}
+
+impl StatusMessage {
+    fn from(message: String) -> Self {
+        Self{
+            time: Instant::now(),
+            text: message
+        }
+    }
+}
+
+
+
 
 #[derive(Default)]
 pub struct Position {
@@ -17,17 +39,25 @@ pub struct Editor {
     terminal : Terminal,
     document: Document,
     cursor_position : Position,
-    offset: Position
+    offset: Position,
+    status_message : StatusMessage,
 }
 
 
 impl Editor {
     pub fn default() -> Self {
-
         let args:Vec<String> = env::args().collect();
+        let mut initial_status = String::from("HELP: Ctrl-C = quit");
+
         let document = if args.len() > 1{
             let file_name = &args[1];
-            Document::open(&file_name).unwrap_or_default()
+            let doc = Document::open(&file_name);
+            if doc.is_ok(){
+                doc.unwrap()
+            }else{
+                initial_status = format!("ERR: Could not open file: {}", file_name);
+                Document::default()
+            }
         } else{
             Document::default()
         };
@@ -38,6 +68,7 @@ impl Editor {
             cursor_position: Position::default(),  
             offset: Position::default(),
             document,
+            status_message : StatusMessage::from(initial_status),
         }
     }
 
@@ -173,6 +204,8 @@ impl Editor {
             println!("Closing Editor... \r");
         } else {
             self.draw_rows();
+            self.draw_status_bar();
+            self.draw_message_bar();
             Terminal::cursor_position(&Position {
                 x: self.cursor_position.x.saturating_sub(self.offset.x),
                 y: self.cursor_position.y.saturating_sub(self.offset.y),
@@ -202,8 +235,9 @@ impl Editor {
         let row = row.render(start, end);
         println!("{}\r", row)
     }
+    
     fn draw_rows (&self){
-        let height = self.terminal.size().height - 1;
+        let height = self.terminal.size().height;
         for terminal_row in 0..height {
             Terminal::clear_current_line();
             if let Some(row) = self.document.row(terminal_row as usize + self.offset.y){
@@ -216,6 +250,48 @@ impl Editor {
         }
     }
 
+    fn draw_status_bar(&self){
+        // let spaces = " ".repeat(self.terminal.size().width as usize);
+        let mut status;
+        let width = self.terminal.size().width as usize;
+        let mut file_name  = "[No Name]".to_string();
+        if let Some(name) = &self.document.file_name{
+            file_name = name.clone();
+            file_name.truncate(20);
+        }
+        status = format!("{} - {} lines", file_name, self.document.len());
+        // if width > status.len(){
+        //     status.push_str(&" ".repeat(width - status.len()));
+        // }
+
+        let line_indicator = format!(
+            "{}/{}",self.cursor_position.y.saturating_add(1),self.document.len()
+        );
+
+        let len = status.len() + line_indicator.len();
+
+        if width > len {
+            status.push_str(&" ".repeat(width - len));
+        }
+
+        status = format!("{}{}", status, line_indicator);
+        status.truncate(width);
+        Terminal::set_bg_color(STATUS_BG_COLOR);
+        Terminal::set_bg_color(STATUS_FG_COLOR);
+        println!("{}\r", status);
+        Terminal::reset_fg_color();
+        Terminal::reset_bg_color();
+    }
+
+    fn draw_message_bar(&self){
+        Terminal::clear_current_line();
+        let message = &self.status_message;
+        if Instant::now() - message.time < Duration::new(5,0){
+            let mut text = message.text.clone();
+            text.truncate(self.terminal.size().width as usize);
+            print!("{}", text);
+        }
+    }
 }
 
 
